@@ -18,7 +18,7 @@
   <version>1.0-SNAPSHOT</version>
   <name>afsk-java</name>
   <description>Java library implementing simple AFSK decoder.</description>
-  <url>https://github.com/dkaukov/esp32-flash</url>
+  <url>https://github.com/dkaukov/afsk-java</url>
 
   <licenses>
     <license>
@@ -40,7 +40,6 @@
     <groupId>org.basepom</groupId>
     <artifactId>basepom-oss</artifactId>
     <version>63</version>
-    <relativePath />
   </parent>
 
   <properties>
