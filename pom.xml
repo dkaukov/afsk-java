@@ -13,7 +13,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.opentable.frontdoor</groupId>
+  <groupId>io.github.dkaukov</groupId>
   <artifactId>afsk-java</artifactId>
   <version>1.0-SNAPSHOT</version>
   <name>afsk-java</name>
