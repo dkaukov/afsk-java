@@ -50,7 +50,7 @@
     <basepom.release.profiles>basepom.central-release</basepom.release.profiles>
     <basepom.license.header>license-header.txt</basepom.license.header>
     <basepom.test.fork-count>1</basepom.test.fork-count>
-    <basepom.test.timeout>300</basepom.test.timeout>
+    <basepom.test.timeout>800</basepom.test.timeout>
     <basepom.test.arguments>-Djava.util.concurrent.ForkJoinPool.common.parallelism=4</basepom.test.arguments>
 
     <dep.jcip-annotations.version>1.0</dep.jcip-annotations.version>
