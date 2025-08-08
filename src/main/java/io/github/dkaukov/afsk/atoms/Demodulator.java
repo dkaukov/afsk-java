@@ -51,10 +51,9 @@ public class Demodulator {
    * @param samples PCM audio chunk (-1.0 to +1.0 floats)
    * @return array of demodulated values (-1.0 to +1.0 approx)
    */
-  public float[] processChunk(float[] samples) {
-    int n = samples.length;
-    float[] output = new float[n];
-    for (int i = 0; i < n; i++) {
+  public float[] processChunk(float[] samples, int length) {
+    float[] output = new float[length];
+    for (int i = 0; i < length; i++) {
       float sample = samples[i];
       // DDS phase advance
       oscillator.next();
@@ -78,6 +77,6 @@ public class Demodulator {
    * Optional: process a single sample at a time (less efficient).
    */
   public float processSample(float sample) {
-    return processChunk(new float[]{sample})[0];
+    return processChunk(new float[]{sample}, 1)[0];
   }
 }

@@ -106,7 +106,7 @@ class Afsk1200DemodulatorTest {
       @Override
       public boolean process(AudioEvent audioEvent) {
         float[] buffer = audioEvent.getFloatBuffer();
-        demod.processChunk(buffer);
+        demod.processChunk(buffer, buffer.length);
         return true; // keep processing entire file
       }
       @Override

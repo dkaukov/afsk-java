@@ -39,7 +39,7 @@ class DemodulatorTest {
     int toneSamples = sampleRate * toneDurationMs / 1000;
     float[] signal = generateAfskAlternatingTones(sampleRate, toneDurationMs, repeats);
     Demodulator demod = new Demodulator(sampleRate, 1200, 2200);
-    float[] deltaQ = demod.processChunk(signal);
+    float[] deltaQ = demod.processChunk(signal, signal.length);
     // Only print first 100 values for debug
     log.trace("deltaQ: {}", Arrays.toString(Arrays.copyOf(deltaQ, 100)));
     // Check that deltaQ crosses zero periodically (i.e., tone changes)
@@ -67,7 +67,7 @@ class DemodulatorTest {
     int repeats = 10;
     float[] signal = generateAfskAlternatingTones(sampleRate, toneDurationMs, repeats);
     Demodulator demod = new Demodulator(sampleRate, 1200, 2200);
-    float[] deltaQ = demod.processChunk(signal);
+    float[] deltaQ = demod.processChunk(signal, signal.length);
     int zeroCrossings = 0;
     for (int i = 1; i < deltaQ.length; i++) {
       if ((deltaQ[i - 1] > 0 && deltaQ[i] < 0) || (deltaQ[i - 1] < 0 && deltaQ[i] > 0)) {

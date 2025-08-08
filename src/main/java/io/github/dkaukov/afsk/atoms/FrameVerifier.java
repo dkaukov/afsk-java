@@ -12,11 +12,12 @@
 package io.github.dkaukov.afsk.atoms;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
-import io.github.dkaukov.afsk.atoms.Ax25Fcs.BitCorrection;
+import io.github.dkaukov.afsk.atoms.Ax25Fcs.BitCorrectionUtil;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -39,9 +40,9 @@ public class FrameVerifier {
     return null;
   }
 
-  private void fix(byte[] frame, List<BitCorrection> corrections) {
-    for (BitCorrection corr : corrections) {
-      frame[corr.byteIndex()] ^= (byte) corr.xorMask();
+  private void fix(byte[] frame,  Map<Integer, Byte> corrections) {
+    for (Entry<Integer, Byte> corr : corrections.entrySet()) {
+      frame[corr.getKey()] ^= corr.getValue();
     }
   }
 
@@ -49,20 +50,23 @@ public class FrameVerifier {
     int bitCount = frame.length * 8;
     // 1-bit flips (fast, can stay single-threaded)
     for (int bit = bitCount - 1; bit >= 0; bit--) {
-      List<BitCorrection> corr = List.of(BitCorrection.fromBit(bit));
+      Map<Integer, Byte> corr = BitCorrectionUtil.fromBits(bit);
       if (Ax25Fcs.calculateFcs(frame, corr) == expectedCrc) {
         fix(frame, corr);
         return true;
       }
     }
     // 2-bit flips (parallel)
-    var result = new AtomicReference<List<BitCorrection>>(null);
+    var result = new AtomicReference<Map<Integer, Byte>>(null);
     IntStream.range(0, bitCount).parallel().forEach(bit1 -> {
       for (int bit2 = bit1; bit2 < bitCount; bit2++) {
         if (result.get() != null) {
           return; // already found
         }
-        List<BitCorrection> corr = List.of(BitCorrection.fromBit(bit1), BitCorrection.fromBit(bit2));
+        if (bit1 == bit2) {
+          continue;
+        }
+        Map<Integer, Byte> corr = BitCorrectionUtil.fromBits(bit1, bit2);
         if (Ax25Fcs.calculateFcs(frame, corr) == expectedCrc) {
           result.compareAndSet(null, corr);
           return;
@@ -81,11 +85,10 @@ public class FrameVerifier {
           if (result.get() != null) {
             return;
           }
-          List<BitCorrection> corr = List.of(
-            BitCorrection.fromBit(bit1),
-            BitCorrection.fromBit(bit2),
-            BitCorrection.fromBit(bit3)
-          );
+          if (bit1 == bit2 || bit2 == bit3) {
+            continue;
+          }
+          Map<Integer, Byte> corr = BitCorrectionUtil.fromBits(bit1, bit2, bit3);
           if (Ax25Fcs.calculateFcs(frame, corr) == expectedCrc) {
             result.compareAndSet(null, corr);
             return;

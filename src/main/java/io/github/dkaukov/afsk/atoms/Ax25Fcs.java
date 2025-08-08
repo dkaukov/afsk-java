@@ -12,7 +12,6 @@
 package io.github.dkaukov.afsk.atoms;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class Ax25Fcs {
@@ -69,11 +68,16 @@ public class Ax25Fcs {
    * Represents a bit correction to be applied to the data before CRC calculation.
    * Contains the byte index and the XOR mask for that byte.
    */
-  public record BitCorrection(int byteIndex, int xorMask) {
-    public static BitCorrection fromBit(int bitIndex) {
-      int byteIndex = bitIndex / 8;
-      int bitOffset = bitIndex % 8;
-      return new BitCorrection(byteIndex, 1 << bitOffset);
+  static class BitCorrectionUtil {
+    public static Map<Integer, Byte> fromBits(int... bitIndices) {
+      Map<Integer, Byte> result = new HashMap<>();
+      for (int bitIndex : bitIndices) {
+        int byteIndex = bitIndex / 8;
+        int bitOffset = bitIndex % 8;
+        byte mask = (byte) (1 << bitOffset);
+        result.merge(byteIndex, mask, (a, b) -> (byte) (a | b));
+      }
+      return result;
     }
   }
 
@@ -83,16 +87,12 @@ public class Ax25Fcs {
    * @param corrections List of bit corrections to apply before calculating FCS
    * @return 16-bit CRC result
    */
-  public static int calculateFcs(byte[] data, List<BitCorrection> corrections) {
-    Map<Integer, Integer> xorMaskMap = new HashMap<>();
-    for (BitCorrection corr : corrections) {
-      xorMaskMap.put(corr.byteIndex(), corr.xorMask());
-    }
+  public static int calculateFcs(byte[] data, Map<Integer, Byte> corrections) {
     int crc = 0xffff;
     for (int i = 0; i < data.length; i++) {
       byte b = data[i];
-      if (xorMaskMap.containsKey(i)) {
-        b ^= xorMaskMap.get(i);
+      if (corrections.containsKey(i)) {
+        b ^= corrections.get(i);
       }
       crc = (crc >>> 8) ^ CCITT_TABLE[(crc ^ b) & 0xff];
     }
