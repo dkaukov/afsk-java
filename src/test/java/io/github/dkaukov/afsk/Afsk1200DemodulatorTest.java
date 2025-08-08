@@ -50,7 +50,7 @@ class Afsk1200DemodulatorTest {
   @Test
   @DisplayName("Track 1 – 40 Mins of Traffic (Flat Discriminator Audio)")
   void testDecodeTrack1() throws Exception {
-    List<byte[]> res = processFile(new File("src/test/resources/01_40-Mins-Traffic -on-144.39.flac"));
+    List<byte[]> res = processFile(new File("src/test/cd/01_40-Mins-Traffic -on-144.39.flac"));
     assertTrue(res.size() >= 3355, "Should decode at least 3355 frames from Track 1");
   }
 
@@ -61,7 +61,7 @@ class Afsk1200DemodulatorTest {
   @Test
   @DisplayName("Track 2 – 100 Mic-E Bursts (De-emphasized Audio)")
   void testDecodeTrack2() throws Exception {
-    List<byte[]> res = processFile(new File("src/test/resources/02_100-Mic-E-Bursts-DE-emphasized.flac"));
+    List<byte[]> res = processFile(new File("src/test/cd/02_100-Mic-E-Bursts-DE-emphasized.flac"));
     assertTrue(res.size() >= 3386, "Should decode at least 3386 frames from Track 2");
   }
 
@@ -72,7 +72,7 @@ class Afsk1200DemodulatorTest {
   //@Test
   @DisplayName("Track 5 – KPC3+ Calibration Tone (Flat)")
   void testDecodeTrack5() throws Exception {
-    processFile(new File("src/test/resources/05_KPC3plus-CAL-tone-Flat.flac"));
+    processFile(new File("src/test/cd/05_KPC3plus-CAL-tone-Flat.flac"));
   }
 
   /**
@@ -82,7 +82,7 @@ class Afsk1200DemodulatorTest {
   @Test
   @DisplayName("Ideal Test – Clean AX.25 Packets")
   void testDecodeIdeal() throws Exception {
-    List<byte[]> res = processFile(new File("src/test/resources/ideal.flac"));
+    List<byte[]> res = processFile(new File("src/test/cd/ideal.flac"));
     assertEquals(4, res.size(), "Should decode exactly 4 frames from ideal.flac");
   }
 
