@@ -35,7 +35,7 @@ public class Afsk1200Demodulator {
     this.slicer = new SymbolSlicerPll(sampleRate, 1200);
   }
 
-  public void processChunk(float[] samples, int length) {
+  public void addSamples(float[] samples, int length) {
     framer.processBits(
       nrziDecoder.decode(
         slicer.slice(
