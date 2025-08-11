@@ -74,7 +74,7 @@ public class Demodulator {
       float demod = (magSq < 0.0001f) ? 0.0f : (deltaQ / magSq) * normGain;
       // Apply dead-zone
       if (Math.abs(demod) < 0.006) {
-        demod = 0.0f;
+        demod = 0.00001f;
       }
       output[i] = demod;
       prevI = filteredI;
