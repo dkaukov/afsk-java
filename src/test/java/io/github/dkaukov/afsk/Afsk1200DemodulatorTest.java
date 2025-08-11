@@ -112,7 +112,7 @@ class Afsk1200DemodulatorTest {
       if (frame != null && frame.length > 0) {
           try {
               APRSPacket packet = Parser.parseAX25(frame);
-              //log.info("Found AX.25 frame: {}>{} {}", packet.getSourceCall(), packet.getDestinationCall(), packet.getAprsInformation().toString());
+              log.trace("Found AX.25 frame: {}>{} {}", packet.getSourceCall(), packet.getDestinationCall(), packet.getAprsInformation().toString());
               frames.add(frame);
           } catch (Exception e) {
               //throw new RuntimeException(e);

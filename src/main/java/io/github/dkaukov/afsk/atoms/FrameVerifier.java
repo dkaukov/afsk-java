@@ -24,19 +24,18 @@ import lombok.extern.slf4j.Slf4j;
 public class FrameVerifier {
 
   public byte[] verifyAndStrip(byte[] frameWithFcs) {
-    if (frameWithFcs == null || frameWithFcs.length < 5) {
+    if (frameWithFcs == null || frameWithFcs.length <= 16) {
       return null;
     }
     byte[] frame = Arrays.copyOf(frameWithFcs, frameWithFcs.length - 2);
     int actualCrc = Ax25Fcs.calculateFcs(frame);
-    int expectedCrc = (frameWithFcs[frameWithFcs.length - 2] & 0xFF) |
-      ((frameWithFcs[frameWithFcs.length - 1] & 0xFF) << 8);
+    int expectedCrc = (frameWithFcs[frameWithFcs.length - 2] & 0xFF) | ((frameWithFcs[frameWithFcs.length - 1] & 0xFF) << 8);
     if (actualCrc == expectedCrc) {
       return frame;
     }
-    if (tryRecoverByBitFlips(frame, expectedCrc)) {
-      return frame;
-    }
+    //if (tryRecoverByBitFlips(frame, expectedCrc)) {
+    //  return frame;
+    //}
     return null;
   }
 
@@ -56,6 +55,7 @@ public class FrameVerifier {
         return true;
       }
     }
+    /*
     // 2-bit flips (parallel)
     var result = new AtomicReference<Map<Integer, Byte>>(null);
     IntStream.range(0, bitCount).parallel().forEach(bit1 -> {
@@ -77,7 +77,6 @@ public class FrameVerifier {
       fix(frame, result.get());
       return true;
     }
-    /*
     // 3-bit flips (expensive, also parallelized)
     result.set(null);
     IntStream.range(0, bitCount).parallel().forEach(bit1 -> {
