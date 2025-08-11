@@ -12,7 +12,8 @@
 package io.github.dkaukov.afsk.atoms;
 
 import io.github.dkaukov.afsk.dsp.DdsOscillator;
-import io.github.dkaukov.afsk.dsp.FIRLowPassFilter;
+import io.github.dkaukov.afsk.dsp.FastFIR;
+import io.github.dkaukov.afsk.dsp.FilterDesignUtils;
 import lombok.Getter;
 
 /**
@@ -23,26 +24,30 @@ import lombok.Getter;
  */
 public class Demodulator {
 
-  public static final int LPF_NUM_TAPS = 70;
 
   @Getter
   private final float sampleRate;
 
   private final DdsOscillator oscillator;
-  private final FIRLowPassFilter iFilter;
-  private final FIRLowPassFilter qFilter;
+  private final FastFIR iFilter;
+  private final FastFIR qFilter;
+  private final FastFIR bpf;
+  private final float normGain;
 
   private float prevI = 0f;
   private float prevQ = 0f;
 
+
   public Demodulator(float sampleRate, float markFreq, float spaceFreq) {
     this.sampleRate = sampleRate;
     float centerFreq = (markFreq + spaceFreq) / 2f;
+    float dev = 0.5f * (spaceFreq - markFreq);
     this.oscillator = new DdsOscillator(sampleRate, centerFreq);
-    //this.iFilter = new FIRLowPassFilter(LPF_NUM_TAPS, (spaceFreq - centerFreq), sampleRate);
-    //this.qFilter = new FIRLowPassFilter(LPF_NUM_TAPS, (spaceFreq - centerFreq), sampleRate);
-    this.iFilter = new FIRLowPassFilter(LPF_NUM_TAPS, 1.027f, 40, 0,  0); // RRC filter
-    this.qFilter = new FIRLowPassFilter(LPF_NUM_TAPS, 1.027f, 40, 0, 0); // RRC filter
+    this.bpf = new FastFIR(FilterDesignUtils.designBandPassKaiser(57, markFreq,  spaceFreq, sampleRate, 30));
+    float[] lpf = FilterDesignUtils.designLowPassHamming(35, dev, sampleRate);
+    iFilter = new FastFIR(lpf);
+    qFilter = new FastFIR(lpf);
+    this.normGain = 1.0f / (2f * (float)Math.PI * (dev / sampleRate));
   }
 
   /**
@@ -54,19 +59,24 @@ public class Demodulator {
   public float[] processChunk(float[] samples, int length) {
     float[] output = new float[length];
     for (int i = 0; i < length; i++) {
-      float sample = samples[i];
+      float sample = bpf.filter(samples[i]);
       // DDS phase advance
       oscillator.next();
       // Mix to baseband
       float mixedI = sample * oscillator.cos();
-      float mixedQ = sample * oscillator.sin();
+      float mixedQ = -sample * oscillator.sin();
       // Low-pass filter
       float filteredI = iFilter.filter(mixedI);
       float filteredQ = qFilter.filter(mixedQ);
       // Phase change
       float deltaQ = filteredQ * prevI - filteredI * prevQ;
       float magSq = filteredI * filteredI + filteredQ * filteredQ;
-      output[i] = magSq == 0.0f ? 0.0f : deltaQ / magSq;
+      float demod = (magSq < 0.0001f) ? 0.0f : (deltaQ / magSq) * normGain;
+      // Apply dead-zone
+      if (Math.abs(demod) < 0.006) {
+        demod = 0.0f;
+      }
+      output[i] = demod;
       prevI = filteredI;
       prevQ = filteredQ;
     }

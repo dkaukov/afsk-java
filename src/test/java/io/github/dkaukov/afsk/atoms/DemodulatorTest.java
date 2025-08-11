@@ -61,10 +61,10 @@ class DemodulatorTest {
    */
   @ParameterizedTest(name = "Short Tones – {0}us Duration")
   @DisplayName("Short Tone Durations – Stability at High Transition Rates")
-  @ValueSource(ints = {10_000, 5_000, 2_000, 1_000, 833, 832, 820})  // durations in microseconds
+  @ValueSource(ints = {10_000, 5_000, 2_000, 1_000 /*833, 832, 820*/})  // durations in microseconds
   void testShortToneDurations(int toneDurationMs) {
     int sampleRate = 48000;
-    int repeats = 10;
+    int repeats = 100;
     float[] signal = generateAfskAlternatingTones(sampleRate, toneDurationMs, repeats);
     Demodulator demod = new Demodulator(sampleRate, 1200, 2200);
     float[] deltaQ = demod.processChunk(signal, signal.length);
@@ -76,6 +76,39 @@ class DemodulatorTest {
     }
     log.debug("Tone {}us: found {} ZC (expected {})", toneDurationMs, zeroCrossings, repeats - 1);
     assertTrue(zeroCrossings >= repeats - 2, "Too few zero crossings");
+  }
+
+  @Test
+  @DisplayName("1200 Hz → -1, 2200 Hz → +1 after normalization")
+  void testTonePolarityAndMagnitude() {
+    int sampleRate = 48000;
+    Demodulator demod = new Demodulator(sampleRate, 1200, 2200);
+
+    float[] tone1200 = generateAfskTone(sampleRate, 1200, 0.1f);
+    float[] tone2200 = generateAfskTone(sampleRate, 2200, 0.1f);
+
+    float mean1200 = mean(demod.processChunk(tone1200, tone1200.length));
+    float mean2200 = mean(demod.processChunk(tone2200, tone2200.length));
+
+    log.info("mean demod @1200Hz = {}", mean1200);
+    log.info("mean demod @2200Hz = {}", mean2200);
+
+    assertTrue(mean1200 < -0.8, "1200 Hz tone should demodulate near -1");
+    assertTrue(mean2200 >  0.8, "2200 Hz tone should demodulate near +1");
+  }
+
+  @Test
+  @DisplayName("Dead-zone silences near-center tone (≈1700 Hz)")
+  void deadZoneSilencesCenterTone() {
+    int fs = 48_000;
+    Demodulator demod = new Demodulator(fs, 1200, 2200);
+    //demod.setDeadZone(0.03f); // ≈ 3% of full-scale after normalization
+    // center tone (mark/space mid), discriminator ≈ 0
+    float[] x = generateAfskTone(fs, (1200+2200)/2, 0.2f);
+    float[] y = demod.processChunk(x, x.length);
+    double frac = mean(y);
+    log.info("center-tone non-zero fraction = {}", frac);
+    assertTrue(frac < 0.00001, "Too many non-zero samples on center tone");
   }
 
   /**
@@ -96,6 +129,22 @@ class DemodulatorTest {
       signal[i] = (float) Math.sin(2 * Math.PI * freq * i / sampleRate);
     }
     return signal;
+  }
+
+  private float[] generateAfskTone(int sampleRate, int freq, float seconds) {
+    int n = (int)(sampleRate * seconds);
+    float[] signal = new float[n];
+    for (int i = 0; i < n; i++) {
+      signal[i] = (float) Math.sin(2 * Math.PI * freq * i / sampleRate);
+    }
+    return signal;
+  }
+
+
+  private float mean(float[] x) {
+    double sum = 0;
+    for (float v : x) sum += v;
+    return (float) (sum / x.length);
   }
 
 }

@@ -26,20 +26,23 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SymbolSlicerPll {
 
-  private final float pllStep;          // Nominal increment per sample
+  private float pllStep;          // Nominal increment per sample
   @Getter
   private float pllPhase = 0.5f;
-  private final float lockedErrorGain;      // Small correction when locked
   private final float searchingErrorGain;   // Bigger correction when not yet locked
   private int prevSymbol = 0;
-  private float prevPllPhase = 0.0f;
   @Getter
   private boolean locked = false;
+  private int consecutiveGoodTransitions = 0;
+  private float pllErrorIntegral = 0.0f;
+  private final float pllStepMin;
+  private final float pllStepMax;
 
   public SymbolSlicerPll(float sampleRate, float baudRate) {
     this.pllStep = baudRate / sampleRate;
-    this.lockedErrorGain = 0.3f;      // Adjust based on signal quality
-    this.searchingErrorGain = 0.3f;   // More aggressive for acquiring signal
+    this.pllStepMin = pllStep * 0.99f; // Minimum step size for PLL
+    this.pllStepMax = pllStep * 1.01f; // Maximum step
+    this.searchingErrorGain = 0.22f;   // More aggressive for acquiring signal
   }
 
   /**
@@ -57,11 +60,24 @@ public class SymbolSlicerPll {
     // If a symbol transition, apply error correction to sync timing
     if (currentSymbol != prevSymbol) {
       float error = pllPhase - 0.5f; // Error from ideal phase (0.5 is mid-symbol)
-      locked = Math.abs(prevPllPhase - pllPhase) < 0.1f;
-      prevPllPhase = pllPhase;
-      float gain = locked ? lockedErrorGain : searchingErrorGain;
-      //log.info("PLL phase: {}, step: {}, error: {}, locked: {}", pllPhase, pllStep, error, locked);
-      pllPhase = pllPhase - (gain * error);
+      pllErrorIntegral += error; // Integral for PLL
+      if (Math.abs(error) < 0.3f) {
+        consecutiveGoodTransitions++;
+        if (consecutiveGoodTransitions > 5)  {
+          locked = true;
+        }
+      } else {
+        consecutiveGoodTransitions = 0;
+        locked = false;
+      }
+      log.trace("PLL phase: {}, step: {}, error: {}, locked: {}", pllPhase, pllStep, error, locked);
+      pllStep = pllStep - (error * 0.0001f) - (pllErrorIntegral * 0.000008f);
+      if (pllStep < pllStepMin) {
+        pllStep = pllStepMin; // Prevent too small step
+      } else if (pllStep > pllStepMax) {
+        pllStep = pllStepMax; // Prevent too large step
+      }
+      pllPhase -= error * searchingErrorGain; // Adjust phase based on error
     }
     prevSymbol = currentSymbol;
   }
@@ -83,7 +99,7 @@ public class SymbolSlicerPll {
   public void reset() {
     pllPhase = 0.5f;
     prevSymbol = 0;
-    prevPllPhase = 0.0f;
     locked = false;
+    consecutiveGoodTransitions = 0;
   }
 }

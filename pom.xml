@@ -14,7 +14,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.dkaukov</groupId>
   <artifactId>afsk-java</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.2-SNAPSHOT</version>
   <name>afsk-java</name>
   <description>Java library implementing simple AFSK decoder.</description>
   <url>https://github.com/dkaukov/afsk-java</url>
@@ -74,6 +74,12 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.ab0oo.javaprslib</groupId>
+      <artifactId>javAPRSlib</artifactId>
+      <version>3.0.6</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

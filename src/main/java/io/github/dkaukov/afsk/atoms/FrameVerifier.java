@@ -77,6 +77,7 @@ public class FrameVerifier {
       fix(frame, result.get());
       return true;
     }
+    /*
     // 3-bit flips (expensive, also parallelized)
     result.set(null);
     IntStream.range(0, bitCount).parallel().forEach(bit1 -> {
@@ -100,6 +101,7 @@ public class FrameVerifier {
       fix(frame, result.get());
       return true;
     }
+     */
     return false;
   }
 }
