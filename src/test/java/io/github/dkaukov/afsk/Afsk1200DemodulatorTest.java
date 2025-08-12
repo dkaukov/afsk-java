@@ -75,7 +75,7 @@ class Afsk1200DemodulatorTest {
   @DisplayName("Track 2 – 100 Mic-E Bursts (De-emphasized Audio)")
   void testDecodeTrack2() throws Exception {
     List<byte[]> res = processFile(new File("src/test/cd/02_100-Mic-E-Bursts-DE-emphasized.flac"));
-    assertTrue(res.size() >= 943, "Should decode at least 955 frames from Track 2");
+    assertTrue(res.size() >= 944, "Should decode at least 955 frames from Track 2");
   }
 
   /**

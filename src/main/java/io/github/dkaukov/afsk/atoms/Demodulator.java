@@ -60,8 +60,6 @@ public class Demodulator {
     float[] output = new float[length];
     for (int i = 0; i < length; i++) {
       float sample = bpf.filter(samples[i]);
-      // DDS phase advance
-      oscillator.next();
       // Mix to baseband
       float mixedI = sample * oscillator.cos();
       float mixedQ = -sample * oscillator.sin();
@@ -79,6 +77,8 @@ public class Demodulator {
       output[i] = demod;
       prevI = filteredI;
       prevQ = filteredQ;
+      // DDS phase advance
+      oscillator.next();
     }
     return output;
   }
