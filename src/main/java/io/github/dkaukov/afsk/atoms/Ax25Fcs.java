@@ -11,10 +11,10 @@
  */
 package io.github.dkaukov.afsk.atoms;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class Ax25Fcs {
+
+  public static final int AX25_CRC_CORRECT   = 0xF0B8;
+  private static final int CRC_CCITT_INIT_VAL = 0xFFFF;
 
   private static final int[] CCITT_TABLE = {
     0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
@@ -57,45 +57,52 @@ public class Ax25Fcs {
    * @return 16-bit CRC result
    */
   public static int calculateFcs(byte[] data) {
-    int crc = 0xffff;
+    int crc = CRC_CCITT_INIT_VAL;
     for (byte b : data) {
       crc = (crc >>> 8) ^ CCITT_TABLE[(crc ^ b) & 0xff];
     }
-    return crc ^ 0xffff;
+    return crc;
+  }
+
+  // Reflected bit-step (CRC-16/X.25): init=0xFFFF, poly=0x8408, NO xorout
+  private static int stepBit(int crc, int bit /*0|1*/) {
+    int mix = (crc ^ bit) & 1;
+    crc >>>= 1;
+    if (mix != 0) {
+      crc ^= 0x8408;
+    }
+    return crc;
   }
 
   /**
-   * Represents a bit correction to be applied to the data before CRC calculation.
-   * Contains the byte index and the XOR mask for that byte.
+   * Influence table (normalized to the linear part).
+   * Returns S[i] = L(E_i), where E_i is a vector of length N with a single '1' at bit i
+   * (LSB-first within each byte). This matches the syndrome definition:
+   *   syndrome = calculateFcs(frame) ^ AX25_CRC_CORRECT = L(E)
    */
-  static class BitCorrectionUtil {
-    public static Map<Integer, Byte> fromBits(int... bitIndices) {
-      Map<Integer, Byte> result = new HashMap<>();
-      for (int bitIndex : bitIndices) {
-        int byteIndex = bitIndex / 8;
-        int bitOffset = bitIndex % 8;
-        byte mask = (byte) (1 << bitOffset);
-        result.merge(byteIndex, mask, (a, b) -> (byte) (a | b));
-      }
-      return result;
+  public static int[] buildInfluenceTable(int size) {
+    int[] S = new int[size];
+    // base = f(0^N) = CRC of N zero bits (no xorout)
+    int base = 0xFFFF;
+    for (int k = 0; k < size; k++) {
+      base = stepBit(base, 0);
     }
+    for (int i = 0; i < size; i++) {
+      int st = 0xFFFF;
+      // i leading zeros
+      for (int k = 0; k < i; k++) {
+        st = stepBit(st, 0);
+      }
+      // the '1'
+      st = stepBit(st, 1);
+      // trailing zeros
+      for (int k = i + 1; k < size; k++) {
+        st = stepBit(st, 0);
+      }
+      // normalize: S[i] = f(E_i) ^ f(0^N) = L(E_i)
+      S[i] = st ^ base;
+    }
+    return S;
   }
 
-  /**
-   * Calculate the 16-bit AX.25 CRC (FCS) for the given data with optional bit corrections.
-   * @param data Byte array of the frame data
-   * @param corrections List of bit corrections to apply before calculating FCS
-   * @return 16-bit CRC result
-   */
-  public static int calculateFcs(byte[] data, Map<Integer, Byte> corrections) {
-    int crc = 0xffff;
-    for (int i = 0; i < data.length; i++) {
-      byte b = data[i];
-      if (corrections.containsKey(i)) {
-        b ^= corrections.get(i);
-      }
-      crc = (crc >>> 8) ^ CCITT_TABLE[(crc ^ b) & 0xff];
-    }
-    return crc ^ 0xffff;
-  }
 }

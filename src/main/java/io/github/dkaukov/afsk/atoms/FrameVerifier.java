@@ -11,98 +11,194 @@
  */
 package io.github.dkaukov.afsk.atoms;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.IntStream;
+import static io.github.dkaukov.afsk.atoms.Ax25Fcs.AX25_CRC_CORRECT;
 
-import io.github.dkaukov.afsk.atoms.Ax25Fcs.BitCorrectionUtil;
+import java.util.Arrays;
+import java.util.HashMap;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class FrameVerifier {
 
+  private final boolean requireAprsUi;
+
+  private static final int MAX_BYTES = 360;
+  private static final int[] INFLUENCE_TABLE = Ax25Fcs.buildInfluenceTable(MAX_BYTES * 8);
+
+  public FrameVerifier(boolean requireAprsUi) {
+    this.requireAprsUi = requireAprsUi;
+  }
+
+  public FrameVerifier() {
+    this.requireAprsUi = true;
+  }
+
   public byte[] verifyAndStrip(byte[] frameWithFcs) {
-    if (frameWithFcs == null || frameWithFcs.length <= 16) {
+    if (frameWithFcs == null || frameWithFcs.length < 2 || frameWithFcs.length > MAX_BYTES) {
       return null;
     }
-    byte[] frame = Arrays.copyOf(frameWithFcs, frameWithFcs.length - 2);
-    int actualCrc = Ax25Fcs.calculateFcs(frame);
-    int expectedCrc = (frameWithFcs[frameWithFcs.length - 2] & 0xFF) | ((frameWithFcs[frameWithFcs.length - 1] & 0xFF) << 8);
-    if (actualCrc == expectedCrc) {
-      return frame;
+    if (Ax25Fcs.calculateFcs(frameWithFcs) == AX25_CRC_CORRECT && passesAx25Sanity(frameWithFcs)) {
+      return Arrays.copyOf(frameWithFcs, frameWithFcs.length - 2);
     }
-    //if (tryRecoverByBitFlips(frame, expectedCrc)) {
-    //  return frame;
-    //}
+    byte[] fixed = recover1or2(frameWithFcs);
+    if (fixed != null && Ax25Fcs.calculateFcs(fixed) == AX25_CRC_CORRECT) {
+      return Arrays.copyOf(fixed, fixed.length - 2);
+    }
     return null;
   }
 
-  private void fix(byte[] frame,  Map<Integer, Byte> corrections) {
-    for (Entry<Integer, Byte> corr : corrections.entrySet()) {
-      frame[corr.getKey()] ^= corr.getValue();
-    }
+  /**
+   * Calculates the syndrome of the given frame.
+   * The syndrome is the XOR of the calculated FCS and the correct AX.25 CRC.
+   *
+   * @param frameWithFcs The frame including the FCS.
+   * @return The syndrome value (0 if the frame is valid).
+   */
+  private int syndrome(byte[] frameWithFcs) {
+    return Ax25Fcs.calculateFcs(frameWithFcs) ^ AX25_CRC_CORRECT; // zero when valid
   }
 
-  private boolean tryRecoverByBitFlips(byte[] frame, int expectedCrc) {
-    int bitCount = frame.length * 8;
-    // 1-bit flips (fast, can stay single-threaded)
-    for (int bit = bitCount - 1; bit >= 0; bit--) {
-      Map<Integer, Byte> corr = BitCorrectionUtil.fromBits(bit);
-      if (Ax25Fcs.calculateFcs(frame, corr) == expectedCrc) {
-        fix(frame, corr);
-        return true;
-      }
-    }
-    /*
-    // 2-bit flips (parallel)
-    var result = new AtomicReference<Map<Integer, Byte>>(null);
-    IntStream.range(0, bitCount).parallel().forEach(bit1 -> {
-      for (int bit2 = bit1; bit2 < bitCount; bit2++) {
-        if (result.get() != null) {
-          return; // already found
-        }
-        if (bit1 == bit2) {
-          continue;
-        }
-        Map<Integer, Byte> corr = BitCorrectionUtil.fromBits(bit1, bit2);
-        if (Ax25Fcs.calculateFcs(frame, corr) == expectedCrc) {
-          result.compareAndSet(null, corr);
-          return;
-        }
-      }
-    });
-    if (result.get() != null) {
-      fix(frame, result.get());
-      return true;
-    }
-    // 3-bit flips (expensive, also parallelized)
-    result.set(null);
-    IntStream.range(0, bitCount).parallel().forEach(bit1 -> {
-      for (int bit2 = bit1; bit2 < bitCount; bit2++) {
-        for (int bit3 = bit2; bit3 < bitCount; bit3++) {
-          if (result.get() != null) {
-            return;
-          }
-          if (bit1 == bit2 || bit2 == bit3) {
-            continue;
-          }
-          Map<Integer, Byte> corr = BitCorrectionUtil.fromBits(bit1, bit2, bit3);
-          if (Ax25Fcs.calculateFcs(frame, corr) == expectedCrc) {
-            result.compareAndSet(null, corr);
-            return;
-          }
-        }
-      }
-    });
-    if (result.get() != null) {
-      fix(frame, result.get());
-      return true;
-    }
-     */
-    return false;
+  /**
+   * Flips a specific bit in the given frame.
+   *
+   * @param f   The frame to modify.
+   * @param bit The index of the bit to flip.
+   */
+  private void flipBit(byte[] f, int bit) {
+    int i = bit >>> 3, m = 1 << (bit & 7);
+    f[i] = (byte)((f[i] & 0xFF) ^ m);          // LSB-first within byte
   }
+
+  /**
+   * Attempts to recover a frame with up to two bit errors.
+   *
+   * @param frameWithFcs The frame including the FCS.
+   * @return The corrected frame if recoverable, or `null` if not.
+   */
+  private byte[] recover1or2(byte[] frameWithFcs) {
+    final int nBits = frameWithFcs.length * 8;
+    final int payloadBits = nBits - 16;      // exclude FCS
+    if (payloadBits <= 0) {
+      return null;
+    }
+    final int R = syndrome(frameWithFcs);
+    if (R == 0) {
+      return frameWithFcs;
+    }
+    // *** critical: slice offset into the prebuilt MAX table ***
+    final int delta = (MAX_BYTES * 8) - nBits;
+    if (delta < 0) {
+      return null;              // frame longer than MAX (already guarded earlier)
+    }
+    // 1-bit
+    for (int i = 0; i < payloadBits; i++) {
+      if (INFLUENCE_TABLE[delta + i] == R) {
+        byte[] out = frameWithFcs.clone();
+        flipBit(out, i);
+        if (passesAx25Sanity(out)) {
+          return out;
+        }
+      }
+    }
+    // 2-bit
+    HashMap<Integer, Integer> inv = new HashMap<>(payloadBits * 2);
+    for (int j = 0; j < payloadBits; j++) {
+      inv.putIfAbsent(INFLUENCE_TABLE[delta + j], j);
+    }
+    for (int i = 0; i < payloadBits; i++) {
+      Integer j = inv.get(R ^ INFLUENCE_TABLE[delta + i]);
+      if (j != null && j != i) {
+        byte[] out = frameWithFcs.clone();
+        flipBit(out, i);
+        flipBit(out, j);
+        if (passesAx25Sanity(out)) {
+          return out;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Checks if the given frame passes AX.25 sanity checks.
+   * This includes validating addresses and optionally checking for APRS UI.
+   *
+   * @param frameWithFcs The frame including the FCS.
+   * @return `true` if the frame passes sanity checks, `false` otherwise.
+   */
+  private boolean passesAx25Sanity(byte[] frameWithFcs) {
+    if (frameWithFcs.length < 2) {
+      return false;
+    }
+    int end = frameWithFcs.length - 2;
+    int i = validateAx25Addresses(frameWithFcs, end);
+    if (i < 0) {
+      return false;
+    }
+    if (requireAprsUi) {
+      if (i + 2 > end) {
+        return false;
+      }
+      int control = frameWithFcs[i] & 0xFF;
+      int pid = frameWithFcs[i + 1] & 0xFF;
+      return control == 0x03 && pid == 0xF0;
+    }
+    return true;
+  }
+
+  /**
+   * Validates the structure of the AX.25 address field in the frame.
+   *
+   * @param buf The full frame bytes.
+   * @param end The index of the last byte to consider (typically frame.length-2 to ignore FCS).
+   * @return The index of the first byte after the address field (start of Control field),
+   *         or -1 if the address field is invalid.
+   */
+  static int validateAx25Addresses(byte[] buf, int end) {
+    int i = 0;
+    int blocks = 0;
+    while (true) {
+      if (i + 7 > end) {
+        return -1; // truncated
+      }
+      // Callsign bytes: 6 chars <<1, LSB must be 0; after >>1 must be [A-Z0-9 ].
+      for (int k = 0; k < 6; k++) {
+        int b = buf[i + k] & 0xFF;
+        if ((b & 0x01) != 0) {
+          return -1; // LSB must be 0
+        }
+        int ch = (b >> 1) & 0x7F;
+        boolean ok = (ch == 0x20) || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z');
+        if (!ok) {
+          return -1;
+        }
+      }
+      // SSID octet
+      int ssid = buf[i + 6] & 0xFF;
+      boolean last = (ssid & 0x01) != 0; // EA bit
+      blocks++;
+      i += 7;
+      // MUST have at least destination + source:
+      if (blocks == 1 && last) {
+        return -1; // destination cannot be last
+      }
+      // Stop at EA=1 (last address block). Before that, enforce max total blocks.
+      if (last) {
+        break;
+      }
+      if (blocks >= 10) {
+        return -1; // dest+src+8 digis max
+      }
+    }
+    // Ensure we actually saw at least dest+src
+    if (blocks < 2) {
+      return -1;
+    }
+    // i now points to start of Control field
+    return i;
+  }
+
 }
 
 
