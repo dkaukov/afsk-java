@@ -60,7 +60,6 @@ public class SymbolSlicerPll {
     // If a symbol transition, apply error correction to sync timing
     if (currentSymbol != prevSymbol) {
       float error = pllPhase - 0.5f; // Error from ideal phase (0.5 is mid-symbol)
-      pllErrorIntegral += error; // Integral for PLL
       if (Math.abs(error) < 0.3f) {
         consecutiveGoodTransitions++;
         if (consecutiveGoodTransitions > 5)  {
@@ -76,6 +75,8 @@ public class SymbolSlicerPll {
         pllStep = pllStepMin; // Prevent too small step
       } else if (pllStep > pllStepMax) {
         pllStep = pllStepMax; // Prevent too large step
+      } else {
+        pllErrorIntegral += error; // Integral for PLL
       }
       pllPhase -= error * searchingErrorGain; // Adjust phase based on error
     }
