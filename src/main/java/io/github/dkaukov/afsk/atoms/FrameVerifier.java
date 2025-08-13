@@ -38,7 +38,7 @@ public class FrameVerifier {
   }
 
   public byte[] verifyAndStrip(byte[] frameWithFcs) {
-    if (frameWithFcs == null || frameWithFcs.length < 2 || frameWithFcs.length > MAX_BYTES) {
+    if (frameWithFcs == null || frameWithFcs.length < 9 || frameWithFcs.length > MAX_BYTES) {
       return null;
     }
     if (Ax25Fcs.calculateFcs(frameWithFcs) == AX25_CRC_CORRECT && passesAx25Sanity(frameWithFcs)) {

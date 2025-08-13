@@ -68,7 +68,7 @@ class Afsk1200DemodulatorOpusTest {
   @DisplayName("Track 1 – 40 Mins of Traffic (Flat Discriminator Audio)")
   void testDecodeTrack1() throws Exception {
     List<byte[]> res = processFile(new File("src/test/cd/01_40-Mins-Traffic -on-144.39.flac"));
-    assertTrue(res.size() >= 1002, "Should decode at least 1001 frames from Track 1");
+    assertTrue(res.size() >= 1003, "Should decode at least 1003 frames from Track 1");
   }
 
   /**
@@ -79,7 +79,7 @@ class Afsk1200DemodulatorOpusTest {
   @DisplayName("Track 2 – 100 Mic-E Bursts (De-emphasized Audio)")
   void testDecodeTrack2() throws Exception {
     List<byte[]> res = processFile(new File("src/test/cd/02_100-Mic-E-Bursts-DE-emphasized.flac"));
-    assertTrue(res.size() >= 948, "Should decode at least 943 frames from Track 2");
+    assertTrue(res.size() >= 948, "Should decode at least 948 frames from Track 2");
   }
 
   /**
