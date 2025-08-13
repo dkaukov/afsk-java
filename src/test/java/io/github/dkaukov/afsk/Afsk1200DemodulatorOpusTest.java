@@ -32,10 +32,12 @@ import be.tarsos.dsp.AudioDispatcher;
 import be.tarsos.dsp.AudioEvent;
 import be.tarsos.dsp.AudioProcessor;
 import be.tarsos.dsp.io.jvm.AudioDispatcherFactory;
+import io.github.dkaukov.afsk.opus.OpusUtils.OpusDecoderWrapper;
+import io.github.dkaukov.afsk.opus.OpusUtils.OpusEncoderWrapper;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-class Afsk1200DemodulatorTest {
+class Afsk1200DemodulatorOpusTest {
 
   @BeforeAll
   static void redirectJulToStdout() {
@@ -66,7 +68,7 @@ class Afsk1200DemodulatorTest {
   @DisplayName("Track 1 – 40 Mins of Traffic (Flat Discriminator Audio)")
   void testDecodeTrack1() throws Exception {
     List<byte[]> res = processFile(new File("src/test/cd/01_40-Mins-Traffic -on-144.39.flac"));
-    assertTrue(res.size() >= 1005, "Should decode at least 1006 frames from Track 1");
+    assertTrue(res.size() >= 1002, "Should decode at least 1001 frames from Track 1");
   }
 
   /**
@@ -77,9 +79,8 @@ class Afsk1200DemodulatorTest {
   @DisplayName("Track 2 – 100 Mic-E Bursts (De-emphasized Audio)")
   void testDecodeTrack2() throws Exception {
     List<byte[]> res = processFile(new File("src/test/cd/02_100-Mic-E-Bursts-DE-emphasized.flac"));
-    assertTrue(res.size() >= 948, "Should decode at least 955 frames from Track 2");
+    assertTrue(res.size() >= 948, "Should decode at least 943 frames from Track 2");
   }
-
 
   /**
    * Test decoding of an idealized flac with only a small number of packets.
@@ -112,12 +113,18 @@ class Afsk1200DemodulatorTest {
           }
       }
     });
+    OpusDecoderWrapper opusDecoder = new OpusDecoderWrapper(48000, 1920);
+    OpusEncoderWrapper opusEncoder = new OpusEncoderWrapper(48000, 1920);
     AudioDispatcher dispatcher = AudioDispatcherFactory.fromPipe(flacFile.getAbsolutePath(), 48000, 1920, 0, 0);
     dispatcher.addAudioProcessor(new AudioProcessor() {
       @Override
       public boolean process(AudioEvent audioEvent) {
         float[] buffer = audioEvent.getFloatBuffer();
-        demod.addSamples(buffer, buffer.length);
+        byte[] opusFrame = new byte[1920];
+        int encoded = opusEncoder.encode(buffer, opusFrame);
+        float[] pcmFloat = new float[1920];
+        int decoded = opusDecoder.decode(opusFrame, encoded, pcmFloat);
+        demod.addSamples(pcmFloat,decoded);
         return true; // keep processing entire file
       }
       @Override

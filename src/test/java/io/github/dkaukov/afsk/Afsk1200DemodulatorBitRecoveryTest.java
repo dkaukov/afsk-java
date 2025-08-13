@@ -35,7 +35,7 @@ import be.tarsos.dsp.io.jvm.AudioDispatcherFactory;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-class Afsk1200DemodulatorTest {
+class Afsk1200DemodulatorBitRecoveryTest {
 
   @BeforeAll
   static void redirectJulToStdout() {
@@ -66,7 +66,7 @@ class Afsk1200DemodulatorTest {
   @DisplayName("Track 1 – 40 Mins of Traffic (Flat Discriminator Audio)")
   void testDecodeTrack1() throws Exception {
     List<byte[]> res = processFile(new File("src/test/cd/01_40-Mins-Traffic -on-144.39.flac"));
-    assertTrue(res.size() >= 1005, "Should decode at least 1006 frames from Track 1");
+    assertTrue(res.size() >= 1042, "Should decode at least 1039 frames from Track 1");
   }
 
   /**
@@ -77,9 +77,8 @@ class Afsk1200DemodulatorTest {
   @DisplayName("Track 2 – 100 Mic-E Bursts (De-emphasized Audio)")
   void testDecodeTrack2() throws Exception {
     List<byte[]> res = processFile(new File("src/test/cd/02_100-Mic-E-Bursts-DE-emphasized.flac"));
-    assertTrue(res.size() >= 948, "Should decode at least 955 frames from Track 2");
+    assertTrue(res.size() >= 992, "Should decode at least 988 frames from Track 2");
   }
-
 
   /**
    * Test decoding of an idealized flac with only a small number of packets.
@@ -101,7 +100,7 @@ class Afsk1200DemodulatorTest {
   List<byte[]> processFile(File flacFile) throws Exception {
     assertTrue(flacFile.exists());
     List<byte[]> frames = new ArrayList<>();
-    Afsk1200Demodulator demod = new Afsk1200Demodulator(48000, false, frame -> {
+    Afsk1200Demodulator demod = new Afsk1200Demodulator(48000, true, frame -> {
       if (frame != null && frame.length > 0) {
           try {
               APRSPacket packet = Parser.parseAX25(frame);

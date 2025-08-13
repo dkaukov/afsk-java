@@ -22,16 +22,19 @@ import lombok.extern.slf4j.Slf4j;
 public class FrameVerifier {
 
   private final boolean requireAprsUi;
+  private final boolean bitRecovery;
 
   private static final int MAX_BYTES = 360;
   private static final int[] INFLUENCE_TABLE = Ax25Fcs.buildInfluenceTable(MAX_BYTES * 8);
 
-  public FrameVerifier(boolean requireAprsUi) {
+  public FrameVerifier(boolean requireAprsUi, boolean bitRecovery) {
     this.requireAprsUi = requireAprsUi;
+    this.bitRecovery = bitRecovery;
   }
 
   public FrameVerifier() {
     this.requireAprsUi = true;
+    this.bitRecovery = true;
   }
 
   public byte[] verifyAndStrip(byte[] frameWithFcs) {
@@ -40,6 +43,9 @@ public class FrameVerifier {
     }
     if (Ax25Fcs.calculateFcs(frameWithFcs) == AX25_CRC_CORRECT && passesAx25Sanity(frameWithFcs)) {
       return Arrays.copyOf(frameWithFcs, frameWithFcs.length - 2);
+    }
+    if (!bitRecovery) {
+      return null; // no recovery requested
     }
     byte[] fixed = recover1or2(frameWithFcs);
     if (fixed != null && Ax25Fcs.calculateFcs(fixed) == AX25_CRC_CORRECT) {

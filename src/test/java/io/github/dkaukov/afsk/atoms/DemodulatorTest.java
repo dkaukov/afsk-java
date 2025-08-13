@@ -38,7 +38,7 @@ class DemodulatorTest {
     int repeats = 10;        // total length = 10 * 20ms = 200ms
     int toneSamples = sampleRate * toneDurationMs / 1000;
     float[] signal = generateAfskAlternatingTones(sampleRate, toneDurationMs, repeats);
-    Demodulator demod = new Demodulator(sampleRate, 1200, 2200);
+    Demodulator demod = new Demodulator(sampleRate, 1200, 2200, 1200);
     float[] deltaQ = demod.processChunk(signal, signal.length);
     // Only print first 100 values for debug
     log.trace("deltaQ: {}", Arrays.toString(Arrays.copyOf(deltaQ, 100)));
@@ -66,7 +66,7 @@ class DemodulatorTest {
     int sampleRate = 48000;
     int repeats = 100;
     float[] signal = generateAfskAlternatingTones(sampleRate, toneDurationMs, repeats);
-    Demodulator demod = new Demodulator(sampleRate, 1200, 2200);
+    Demodulator demod = new Demodulator(sampleRate, 1200, 2200, 1200);
     float[] deltaQ = demod.processChunk(signal, signal.length);
     int zeroCrossings = 0;
     for (int i = 1; i < deltaQ.length; i++) {
@@ -82,7 +82,7 @@ class DemodulatorTest {
   @DisplayName("1200 Hz → -1, 2200 Hz → +1 after normalization")
   void testTonePolarityAndMagnitude() {
     int sampleRate = 48000;
-    Demodulator demod = new Demodulator(sampleRate, 1200, 2200);
+    Demodulator demod = new Demodulator(sampleRate, 1200, 2200, 1200);
 
     float[] tone1200 = generateAfskTone(sampleRate, 1200, 0.1f);
     float[] tone2200 = generateAfskTone(sampleRate, 2200, 0.1f);
@@ -101,7 +101,7 @@ class DemodulatorTest {
   @DisplayName("Dead-zone silences near-center tone (≈1700 Hz)")
   void deadZoneSilencesCenterTone() {
     int fs = 48_000;
-    Demodulator demod = new Demodulator(fs, 1200, 2200);
+    Demodulator demod = new Demodulator(fs, 1200, 2200, 1200);
     //demod.setDeadZone(0.03f); // ≈ 3% of full-scale after normalization
     // center tone (mark/space mid), discriminator ≈ 0
     float[] x = generateAfskTone(fs, (1200+2200)/2, 0.2f);
@@ -115,7 +115,7 @@ class DemodulatorTest {
   @DisplayName("Silence → near-zero mean and low RMS")
   void silenceProducesNearZero() {
     int fs = 48_000;
-    Demodulator demod = new Demodulator(fs, 1200, 2200);
+    Demodulator demod = new Demodulator(fs, 1200, 2200, 1200);
     float[] z = new float[8192];
     float[] y = demod.processChunk(z, z.length);
 
@@ -133,8 +133,8 @@ class DemodulatorTest {
   @DisplayName("Amplitude invariance: 0.25× vs 0.9× input → same demod mean")
   void amplitudeInvariance() {
     int fs = 48_000;
-    Demodulator d1 = new Demodulator(fs, 1200, 2200);
-    Demodulator d2 = new Demodulator(fs, 1200, 2200);
+    Demodulator d1 = new Demodulator(fs, 1200, 2200, 1200);
+    Demodulator d2 = new Demodulator(fs, 1200, 2200, 1200);
 
     float[] base = generateAfskTone(fs, 2200, 0.2f);
     float[] a025 = new float[base.length];
@@ -152,12 +152,12 @@ class DemodulatorTest {
   @DisplayName("Small frequency error (±30 Hz) still normalizes correctly")
   void smallFreqOffsetTolerance() {
     int fs = 48_000;
-    Demodulator demod = new Demodulator(fs, 1200, 2200);
+    Demodulator demod = new Demodulator(fs, 1200, 2200, 1200);
     float[] hi = generateAfskTone(fs, 2200 + 30, 0.2f);
     float[] lo = generateAfskTone(fs, 1200 - 30, 0.2f);
 
     float mHi = mean(demod.processChunk(hi, hi.length));
-    demod = new Demodulator(fs, 1200, 2200);
+    demod = new Demodulator(fs, 1200, 2200, 1200);
     float mLo = mean(demod.processChunk(lo, lo.length));
 
     assertTrue(mHi > 0.7f, "Slightly high space tone should still demod near +1");
@@ -168,7 +168,7 @@ class DemodulatorTest {
   @DisplayName("Input DC offset is rejected by pre‑BPF")
   void dcOffsetRejected() {
     int fs = 48_000;
-    Demodulator demod = new Demodulator(fs, 1200, 2200);
+    Demodulator demod = new Demodulator(fs, 1200, 2200, 1200);
     float[] t = generateAfskTone(fs, 2200, 0.2f);
     for (int i = 0; i < t.length; i++) t[i] += 0.1f; // add DC
     float[] y = demod.processChunk(t, t.length);
@@ -186,7 +186,7 @@ class DemodulatorTest {
     int toneUs = 10_000; // 10 ms per segment
     int repeats = 4;
     float[] x = generateAfskAlternatingTones(fs, toneUs, repeats);
-    Demodulator demod = new Demodulator(fs, 1200, 2200);
+    Demodulator demod = new Demodulator(fs, 1200, 2200, 1200);
     float[] y = demod.processChunk(x, x.length);
     // Find the first transition sample in input (10 ms) and when demod crosses zero after that.
     int transition = fs * toneUs / 1_000_000; // ~480 samples
@@ -214,9 +214,9 @@ class DemodulatorTest {
     float[] tSpace = generateAfskTone(fs, 2200, 0.25f);
     addWhiteNoise(tMark, 0.3f, 12345);   // ~10–12 dB SNR depending on window
     addWhiteNoise(tSpace, 0.3f, 12345);
-    Demodulator d = new Demodulator(fs, 1200, 2200);
+    Demodulator d = new Demodulator(fs, 1200, 2200, 1200);
     float mMark  = mean(d.processChunk(tMark, tMark.length));
-    d = new Demodulator(fs, 1200, 2200);
+    d = new Demodulator(fs, 1200, 2200, 1200);
     float mSpace = mean(d.processChunk(tSpace, tSpace.length));
     assertTrue(mMark < -0.5f,  "Mark should remain negative on average under noise");
     assertTrue(mSpace >  0.5f, "Space should remain positive on average under noise");

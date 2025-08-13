@@ -25,14 +25,19 @@ public class Afsk1200Demodulator {
   private final NrziDecoder nrziDecoder;
   private final HdlcDeframer framer;
   private final FrameListener onFrame;
-  private final FrameVerifier frameVerifier = new FrameVerifier();
+  private final FrameVerifier frameVerifier;
 
-  public Afsk1200Demodulator(int sampleRate, FrameListener onFrame) {
+  public Afsk1200Demodulator(int sampleRate, boolean bitRecovery, FrameListener onFrame) {
     this.onFrame = onFrame;
     this.nrziDecoder = new NrziDecoder();
     this.framer = new HdlcDeframer();
-    this.demodulator = new Demodulator(sampleRate, 1200, 2200);
+    this.demodulator = new Demodulator(sampleRate, 1200, 2200, 1200);
     this.slicer = new SymbolSlicerPll(sampleRate, 1200);
+    frameVerifier  = new FrameVerifier(true, bitRecovery);;
+  }
+
+  public Afsk1200Demodulator(int sampleRate,  FrameListener onFrame) {
+    this(sampleRate, true, onFrame);
   }
 
   public void addSamples(float[] samples, int length) {

@@ -14,6 +14,7 @@ package io.github.dkaukov.afsk.atoms;
 import io.github.dkaukov.afsk.dsp.DdsOscillator;
 import io.github.dkaukov.afsk.dsp.FastFIR;
 import io.github.dkaukov.afsk.dsp.FilterDesignUtils;
+import io.github.dkaukov.afsk.dsp.SinglePoleIIRLpf;
 import lombok.Getter;
 
 /**
@@ -32,13 +33,13 @@ public class Demodulator {
   private final FastFIR iFilter;
   private final FastFIR qFilter;
   private final FastFIR bpf;
+  private final SinglePoleIIRLpf  outputLp;
   private final float normGain;
 
   private float prevI = 0f;
   private float prevQ = 0f;
 
-
-  public Demodulator(float sampleRate, float markFreq, float spaceFreq) {
+  public Demodulator(float sampleRate, float markFreq, float spaceFreq, float baudRate) {
     this.sampleRate = sampleRate;
     float centerFreq = (markFreq + spaceFreq) / 2f;
     float dev = 0.5f * (spaceFreq - markFreq);
@@ -48,6 +49,7 @@ public class Demodulator {
     iFilter = new FastFIR(lpf);
     qFilter = new FastFIR(lpf);
     this.normGain = 1.0f / (2f * (float)Math.PI * (dev / sampleRate));
+    outputLp = new SinglePoleIIRLpf(sampleRate, baudRate * 3.0f);
   }
 
   /**
@@ -69,10 +71,10 @@ public class Demodulator {
       // Phase change
       float deltaQ = filteredQ * prevI - filteredI * prevQ;
       float magSq = filteredI * filteredI + filteredQ * filteredQ;
-      float demod = (magSq < 0.0001f) ? 0.0f : (deltaQ / magSq) * normGain;
+      float demod = outputLp.filter((magSq < 1e-12f) ? 0.0f : (deltaQ / magSq) * normGain);
       // Apply dead-zone
       if (Math.abs(demod) < 0.006) {
-        demod = 0.00001f;
+        demod = 1e-12f;
       }
       output[i] = demod;
       prevI = filteredI;
