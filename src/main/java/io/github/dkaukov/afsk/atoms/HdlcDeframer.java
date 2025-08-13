@@ -11,19 +11,22 @@
  */
 package io.github.dkaukov.afsk.atoms;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.ByteArrayOutputStream;
 
 public class HdlcDeframer {
 
-  private static final int FLAG_PATTERN = 0b01111110;
+  private static final byte FLAG = 0x7E; // 0b01111110
+  private static final int  ABORT_ONES = 7;        // HDLC abort threshold
 
-  private int bitBuffer = 0;
-  private int bitCount = 0;
+  // Sliding 8-bit window to find flags.
+  private byte flagWindow = 0;
 
-  private final List<Integer> currentBits = new ArrayList<>();
-  private int oneCount = 0;
+  // Frame assembly state.
   private boolean inFrame = false;
+  private int oneRun = 0;        // count of consecutive '1' bits
+  private int bitPos = 0;        // 0..7 (LSB-first)
+  private int currentByte = 0;
+  private final ByteArrayOutputStream frame = new ByteArrayOutputStream(512);
 
   public interface FrameListener {
     void onFrame(byte[] frame);
@@ -31,65 +34,64 @@ public class HdlcDeframer {
 
   public void processBits(int[] bits, FrameListener listener) {
     for (int bit : bits) {
-      // Shift in each bit (MSB first)
-      bitBuffer = ((bitBuffer << 1) | bit) & 0xFF;
-      bitCount++;
-      // Check for 0x7E flag
-      if (bitCount >= 8 && bitBuffer == FLAG_PATTERN) {
-        if (inFrame && !currentBits.isEmpty()) {
-          // Frame complete
-          byte[] frame = bitsToBytes(currentBits);
-          listener.onFrame(frame);
+      flagWindow = (byte) ((flagWindow << 1) | bit);
+      if (flagWindow == FLAG) {
+        if (inFrame && bitPos == 7 && frame.size() >= 9) {
+          listener.onFrame(frame.toByteArray());
         }
-        // Reset for next frame
-        inFrame = true;
-        currentBits.clear();
-        oneCount = 0;
+        startNewFrame();
         continue;
       }
-      if (!inFrame) {
-        continue;
-      }
-      // Bit de-stuffing: after 5 ones, skip next 0
-      if (bit == 1) {
-        oneCount++;
-      } else {
-        if (oneCount == 5) {
-          // Stuffed 0 — skip it
-          oneCount = 0;
+      if (inFrame) {
+        // Bit de-stuffing: after 5 ones, skip next 0
+        if (bit == 1) {
+          if (++oneRun >= ABORT_ONES) {
+            dropFrame();
+            continue;
+          }
+        } else if (oneRun == 5) {
+          oneRun = 0;
           continue;
+        } else {
+          oneRun = 0;
         }
-        oneCount = 0;
+        addBit(bit);
       }
-      currentBits.add(bit);
     }
   }
 
-  private byte[] bitsToBytes(List<Integer> bits) {
-    List<Byte> result = new ArrayList<>();
-    int currentByte = 0;
-    int bitIndex = 0;
-    for (int bit : bits) {
-      currentByte |= (bit << bitIndex++);
-      if (bitIndex == 8) {
-        result.add((byte) currentByte);
-        currentByte = 0;
-        bitIndex = 0;
-      }
+  private void addBit(int bit) {
+    currentByte |= (bit << bitPos);
+    bitPos++;
+    if (bitPos == 8) {
+      frame.write((byte) currentByte);
+      currentByte = 0;
+      bitPos = 0;
     }
-    byte[] out = new byte[result.size()];
-    for (int i = 0; i < result.size(); i++) {
-      out[i] = result.get(i);
-    }
-    return out;
   }
 
   public void reset() {
-    bitBuffer = 0;
-    bitCount = 0;
-    oneCount = 0;
+    flagWindow = 0;
     inFrame = false;
-    currentBits.clear();
+    oneRun = 0;
+    bitPos = 0;
+    currentByte = 0;
+    frame.reset();
+  }
+
+  private void startNewFrame() {
+    inFrame = true;
+    oneRun = 0;
+    bitPos = 0;
+    currentByte = 0;
+    frame.reset();
+  }
+
+  private void dropFrame() {
+    inFrame = false;
+    oneRun = 0;
+    bitPos = 0;
+    currentByte = 0;
+    frame.reset();
   }
 }
-
