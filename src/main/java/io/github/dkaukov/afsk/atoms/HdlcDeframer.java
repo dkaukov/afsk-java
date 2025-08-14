@@ -13,6 +13,8 @@ package io.github.dkaukov.afsk.atoms;
 
 import java.io.ByteArrayOutputStream;
 
+import io.github.dkaukov.afsk.util.BitBuffer;
+
 public class HdlcDeframer {
 
   private static final byte FLAG = 0x7E; // 0b01111110
@@ -32,7 +34,7 @@ public class HdlcDeframer {
     void onFrame(byte[] frame);
   }
 
-  public void processBits(int[] bits, FrameListener listener) {
+  public void processBits(BitBuffer bits, FrameListener listener) {
     for (int bit : bits) {
       flagWindow = (byte) ((flagWindow << 1) | bit);
       if (flagWindow == FLAG) {

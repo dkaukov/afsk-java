@@ -11,6 +11,8 @@
  */
 package io.github.dkaukov.afsk.atoms;
 
+import io.github.dkaukov.afsk.util.BitBuffer;
+
 /**
  * NRZI (Non-Return-to-Zero Inverted) decoder.
  * Converts NRZI-encoded bits into logical bits.
@@ -27,14 +29,14 @@ public class NrziDecoder {
    * @param nrziBits Input array (physical line level), 0 or 1
    * @return Decoded bitstream (logical bits), 0 or 1
    */
-  public int[] decode(int[] nrziBits) {
-    int[] result = new int[nrziBits.length];
-    for (int i = 0; i < nrziBits.length; i++) {
-      int current = nrziBits[i];
-      result[i] = (current == lastBit) ? 1 : 0;
+   public BitBuffer decode(BitBuffer nrziBits) {
+    //BitBuffer result = new BitBuffer(nrziBits.size());
+    for (int i = 0; i < nrziBits.size(); i++) {
+      int current = nrziBits.getBit(i);
+      nrziBits.setBit(i, (current == lastBit) ? 1 : 0);
       lastBit = current;
     }
-    return result;
+    return nrziBits;
   }
 
   /**

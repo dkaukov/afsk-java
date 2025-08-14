@@ -34,6 +34,11 @@ public class SinglePoleIIRLpf {
     this.y = 0f;
   }
 
+  public SinglePoleIIRLpf(float alpha) {
+    this.alpha = alpha;
+    this.y = 0f;
+  }
+
   /**
    * Filter one sample.
    *

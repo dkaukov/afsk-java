@@ -11,10 +11,10 @@
  */
 package io.github.dkaukov.afsk.atoms;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.github.dkaukov.afsk.util.BitBuffer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SymbolSlicerPll {
 
+  private final BitBuffer bits = new BitBuffer(512*8);
   private float pllStep;          // Nominal increment per sample
   @Getter
   private float pllPhase = 0.5f;
@@ -87,14 +88,13 @@ public class SymbolSlicerPll {
    * Slice an entire chunk of demodulated samples into bits.
    * Returns an array of decoded bits (0 or 1).
    */
-  public int[] slice(float[] samples) {
-    List<Integer> bits = new ArrayList<>();
+  @SuppressFBWarnings("EI_EXPOSE_REP")
+  public BitBuffer slice(float[] samples) {
+    bits.clear();
     for (float sample : samples) {
-      process(sample, bits::add);
+      process(sample, bits::addBit);
     }
-    return bits.stream()
-      .mapToInt(Integer::intValue)
-      .toArray();
+    return bits;
   }
 
   public void reset() {

@@ -57,6 +57,7 @@
     <dep.lombok.version>1.18.38</dep.lombok.version>
     <dep.junit-jupiter.version>5.12.0</dep.junit-jupiter.version>
     <dep.slf4j.version>1.7.36</dep.slf4j.version>
+    <dep.spotbugs-annotations.version>4.8.6</dep.spotbugs-annotations.version>
   </properties>
 
   <scm>
@@ -67,6 +68,11 @@
   </scm>
 
   <dependencies>
+    <dependency>
+      <groupId>com.github.spotbugs</groupId>
+      <artifactId>spotbugs-annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
@@ -166,6 +172,11 @@
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter-api</artifactId>
         <version>${dep.junit-jupiter.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-annotations</artifactId>
+        <version>${dep.spotbugs-annotations.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
