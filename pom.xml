@@ -14,7 +14,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.dkaukov</groupId>
   <artifactId>afsk-java</artifactId>
-  <version>1.5-SNAPSHOT</version>
+  <version>1.5</version>
   <name>afsk-java</name>
   <description>Java library implementing simple AFSK decoder.</description>
   <url>https://github.com/dkaukov/afsk-java</url>
@@ -64,7 +64,7 @@
     <connection>scm:git:git://github.com/dkaukov/afsk-java.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/dkaukov/afsk-java.git</developerConnection>
     <url>https://github.com/dkaukov/afsk-java</url>
-    <tag>HEAD</tag>
+    <tag>afsk-java-1.5</tag>
   </scm>
 
   <dependencies>
