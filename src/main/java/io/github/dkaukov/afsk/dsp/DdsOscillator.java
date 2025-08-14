@@ -20,7 +20,7 @@ package io.github.dkaukov.afsk.dsp;
 public class DdsOscillator {
 
   private static final int PHASE_BITS = 32;
-  private static final int TABLE_BITS = 10;
+  private static final int TABLE_BITS = 9;
   private static final int TABLE_SIZE = 1 << TABLE_BITS;
   private static final int TABLE_MASK = TABLE_SIZE - 1;
   private static final int COS_SHIFT = TABLE_SIZE / 4; // 90° phase shift
