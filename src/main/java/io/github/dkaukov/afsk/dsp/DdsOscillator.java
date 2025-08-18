@@ -28,7 +28,8 @@ public class DdsOscillator {
   private final float[] sineTable = new float[TABLE_SIZE];
   private int phase = 0;
   private int index = 0;
-  private final int phaseStep;
+  private int phaseStep;
+  private final float sampleRate;
 
   public DdsOscillator(float sampleRate, float freq) {
     // Precompute sine table
@@ -37,6 +38,7 @@ public class DdsOscillator {
     }
     // Fixed-point step
     this.phaseStep = (int) ((freq * (1L << PHASE_BITS)) / sampleRate);
+    this.sampleRate = sampleRate;
   }
 
   public void reset() {
@@ -50,6 +52,10 @@ public class DdsOscillator {
   public void next() {
     phase += phaseStep;
     index = (phase >>> (PHASE_BITS - TABLE_BITS)) & TABLE_MASK;
+  }
+
+  public void setFrequency(float freq) {
+    this.phaseStep = (int) ((freq * (1L << PHASE_BITS)) / sampleRate);
   }
 
   public float sin() {

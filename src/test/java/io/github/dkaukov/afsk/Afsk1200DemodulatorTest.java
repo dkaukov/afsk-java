@@ -92,6 +92,14 @@ class Afsk1200DemodulatorTest {
     assertEquals(4, res.size(), "Should decode exactly 4 frames from ideal.flac");
   }
 
+
+  @Test
+  @DisplayName("AFSK 1200 with Noise – Decodes Frames")
+  void testDecodeAx25Noise() throws Exception {
+    List<byte[]> res = processFile(new File("src/test/cd/afsk_1200_ax25_noise.flac"));
+    assertEquals(23, res.size(), "Should decode exactly 23 frames from afsk_1200_ax25_noise.flac");
+  }
+
   /**
    * Common logic to run the demodulator over the given audio file, collecting frames.
    *

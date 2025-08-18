@@ -44,8 +44,8 @@ public class Demodulator {
     float centerFreq = (markFreq + spaceFreq) / 2f;
     float dev = 0.5f * (spaceFreq - markFreq);
     this.oscillator = new DdsOscillator(sampleRate, centerFreq);
-    this.bpf = new FastFIR(FilterDesignUtils.designBandPassKaiser(57, markFreq,  spaceFreq, sampleRate, 30));
-    float[] lpf = FilterDesignUtils.designLowPassHamming(35, dev, sampleRate);
+    this.bpf = new FastFIR(FilterDesignUtils.designBandPassKaiser(Math.round(sampleRate / baudRate * 1.425f), markFreq,  spaceFreq, sampleRate, 30));
+    float[] lpf = FilterDesignUtils.designLowPassHamming(Math.round(sampleRate / baudRate * 0.875f), dev, sampleRate);
     iFilter = new FastFIR(lpf);
     qFilter = new FastFIR(lpf);
     this.normGain = 1.0f / (2f * (float)Math.PI * (dev / sampleRate));
