@@ -64,7 +64,7 @@ public class Afsk1200Modulator {
     int samples = (int) (duration.toNanos() * 1e-9 * sampleRate);
     for (int i = 0; i < samples; i++) {
       buffer[chunkIndex++] = 0f;
-      if (chunkIndex >= chunkSize) {
+      if (chunkIndex % chunkSize == 0) {
         callback.accept(buffer, chunkIndex);
         chunkIndex = 0;
       }

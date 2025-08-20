@@ -57,10 +57,9 @@ public class Modulator {
       osc.setFrequency(bit != 0 ? markFreq : spaceFreq);
       bitEnd += samplesPerBit;
       while (bitPhase < bitEnd) {
-        osc.next();
-        bitPhase += 1.0f;
+        osc.next(); bitPhase += 1.0f;
         buffer[chunkIndex++] = osc.cos();
-        if (chunkIndex >= chunkSize) {
+        if (chunkIndex % chunkSize == 0) {
           callback.accept(buffer, chunkIndex);
           chunkIndex = 0;
         }

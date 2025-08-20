@@ -12,10 +12,13 @@
 package io.github.dkaukov.afsk.atoms;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import org.junit.jupiter.api.DisplayName;
@@ -121,4 +124,24 @@ public class HdlcFramerTest {
     new Random(42).nextBytes(data);
     roundTrip(data);
   }
+
+  @Test
+  @DisplayName("Back to back frame/deframe with two consecutive frames")
+  public void testTwoConsecutiveFrames() {
+    byte[] payload1 = "012346789: First".getBytes();
+    byte[] payload2 = "012346789: Second".getBytes();
+    HdlcFramer framer = new HdlcFramer(1, 2);
+    BitBuffer bits1 = framer.frame(payload1);
+    BitBuffer bits2 = framer.frame(payload2);
+    // Combine the two frames into one bitstream
+    BitBuffer combined = new BitBuffer(bits1.size() + bits2.size());
+    combined.addAll(bits1);combined.addAll(bits2);
+    List<byte[]> frames = new ArrayList<>();
+    HdlcDeframer deframer = new HdlcDeframer();
+    deframer.processBits(combined, frames::add);
+    assertEquals(2, frames.size(), "Expected two deframed packets");
+    assertArrayEquals(payload1, Arrays.copyOf(frames.get(0), frames.get(0).length - 2), "First frame mismatch");
+    assertArrayEquals(payload2, Arrays.copyOf(frames.get(1), frames.get(1).length - 2), "Second frame mismatch");
+  }
+
 }
