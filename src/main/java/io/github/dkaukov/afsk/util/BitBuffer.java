@@ -157,6 +157,13 @@ public final class BitBuffer implements Iterable<Integer> {
     }
   }
 
+  public BitBuffer copy() {
+    BitBuffer copy = new BitBuffer(bitCount);
+    System.arraycopy(words, 0, copy.words, 0, words.length);
+    copy.bitCount = bitCount;
+    return copy;
+  }
+
   /** Emit bits to a sink (0/1) without allocating arrays. */
   public void emit(IntConsumer sink) {
     for (int i = 0; i < bitCount; i++) {
@@ -256,5 +263,33 @@ public final class BitBuffer implements Iterable<Integer> {
       int newLen = Math.max(needWords, words.length + (words.length >> 1) + 1);
       words = Arrays.copyOf(words, newLen);
     }
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof BitBuffer other)) {
+      return false;
+    }
+    if (this.size() != other.size()) {
+      return false;
+    }
+    for (int i = 0; i < size(); i++) {
+      if (this.getBit(i) != other.getBit(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = 1;
+    for (int i = 0; i < size(); i++) {
+      result = 31 * result + getBit(i);
+    }
+    return result;
   }
 }
