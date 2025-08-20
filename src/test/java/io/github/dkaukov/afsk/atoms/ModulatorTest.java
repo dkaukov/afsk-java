@@ -11,13 +11,16 @@
  */
 package io.github.dkaukov.afsk.atoms;
 
-import io.github.dkaukov.afsk.util.BitBuffer;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+
+import io.github.dkaukov.afsk.util.BitBuffer;
 
 class ModulatorTest {
 
@@ -36,12 +39,16 @@ class ModulatorTest {
 
     Modulator mod = new Modulator(sampleRate, markFreq, spaceFreq, baudRate);
     float[] buffer = new float[chunkSize];
-    mod.modulate(bits, buffer, chunkSize, (buf, len) -> {
+    int rem = mod.modulate(bits, buffer, chunkSize, 0, (buf, len) -> {
       float[] copy = new float[len];
       System.arraycopy(buf, 0, copy, 0, len);
       outputChunks.add(copy);
     });
-
+    if (rem > 0) {
+      float[] lastChunk = new float[rem];
+      System.arraycopy(buffer, 0, lastChunk, 0, rem);
+      outputChunks.add(lastChunk);
+    }
     assertFalse(outputChunks.isEmpty());
     int totalSamples = outputChunks.stream().mapToInt(a -> a.length).sum();
     int expectedSamples = Math.round(sampleRate / baudRate);
@@ -60,17 +67,19 @@ class ModulatorTest {
     for (int i = 0; i < 10; i++) {
       bits.addBit(i % 2); // alternate MARK/SPACE
     }
-
     List<Float> samples = new ArrayList<>();
-
     Modulator mod = new Modulator(sampleRate, markFreq, spaceFreq, baudRate);
     float[] buffer = new float[chunkSize];
-    mod.modulate(bits, buffer, chunkSize, (buf, len) -> {
+    int rem = mod.modulate(bits, buffer, chunkSize, 0, (buf, len) -> {
       for (int i = 0; i < len; i++) {
         samples.add(buf[i]);
       }
     });
-
+    if (rem > 0) {
+      for (int i = 0; i < rem; i++) {
+        samples.add(buffer[i]);
+      }
+    }
     int expectedSamples = Math.round(bits.size() * sampleRate / baudRate);
     assertEquals(expectedSamples, samples.size(), 1.0, "Mismatch in expected number of output samples");
   }
@@ -91,11 +100,16 @@ class ModulatorTest {
 
     Modulator mod = new Modulator(sampleRate, markFreq, spaceFreq, baudRate);
     float[] buffer = new float[chunkSize];
-    mod.modulate(bits, buffer, chunkSize, (buf, len) -> {
+    int rem = mod.modulate(bits, buffer, chunkSize, 0, (buf, len) -> {
       for (int i = 0; i < len; i++) {
         samples.add(buf[i]);
       }
     });
+    if (rem > 0) {
+      for (int i = 0; i < rem; i++) {
+        samples.add(buffer[i]);
+      }
+    }
 
     // crude phase continuity check: no jump between last of first bit and first of second
     int spb = Math.round(sampleRate / baudRate);

@@ -50,8 +50,7 @@ public class Modulator {
    * @param chunkSize Number of samples per chunk to emit
    * @param callback Called with (buffer, validLength) after each filled chunk
    */
-  public void modulate(BitBuffer bits, float[] buffer, int chunkSize, BiConsumer<float[], Integer> callback) {
-    int chunkIndex = 0;
+  public int modulate(BitBuffer bits, float[] buffer, int chunkSize, int chunkIndex,  BiConsumer<float[], Integer> callback) {
     float bitPhase = 0f;
     float bitEnd = 0f;
     for (int bit: bits) {
@@ -67,9 +66,7 @@ public class Modulator {
         }
       }
     }
-    if (chunkIndex > 0) {
-      callback.accept(buffer, chunkIndex);
-    }
+    return chunkIndex;
   }
 
   public void reset() {

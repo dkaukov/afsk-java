@@ -12,7 +12,9 @@
 package io.github.dkaukov.afsk;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import io.github.dkaukov.afsk.atoms.HdlcFramer;
 import io.github.dkaukov.afsk.atoms.Modulator;
@@ -29,8 +31,9 @@ public class Afsk1200Modulator {
   private final NrzEncoder nrzEncoder;
   private final Modulator modulator;
   private final int sampleRate;
+  private int chunkIndex;
 
-  /**
+    /**
    * Create a new Bell 202 (AFSK1200) modulator.
    *
    * @param sampleRate Output sample rate in Hz (e.g., 48000)
@@ -44,7 +47,6 @@ public class Afsk1200Modulator {
 
   private void emitSilence(float[] buffer, int chunkSize, Duration duration, BiConsumer<float[], Integer> callback) {
     int samples = (int) (duration.toNanos() * 1e-9 * sampleRate);
-    int chunkIndex = 0;
     for (int i = 0; i < samples; i++) {
       buffer[chunkIndex++] = 0f;
       if (chunkIndex >= chunkSize) {
@@ -52,9 +54,14 @@ public class Afsk1200Modulator {
         chunkIndex = 0;
       }
     }
-    if (chunkIndex > 0) {
-      callback.accept(buffer, chunkIndex);
-    }
+  }
+
+  private void internalModulate(byte[] payload, float[] buffer, int chunkSize, BiConsumer<float[], Integer> callback) {
+    nrzEncoder.reset();
+    modulator.reset();
+    BitBuffer stuffed = framer.frame(payload);
+    BitBuffer nrz = nrzEncoder.encode(stuffed);
+    chunkIndex = modulator.modulate(nrz, buffer, chunkSize,  chunkIndex, callback);
   }
 
   /**
@@ -67,11 +74,11 @@ public class Afsk1200Modulator {
    * @param callback Called with (buffer, validLength) after each filled chunk
    */
   public void modulate(byte[] payload, float[] buffer, int chunkSize, BiConsumer<float[], Integer> callback) {
-    nrzEncoder.reset();
-    modulator.reset();
-    BitBuffer stuffed = framer.frame(payload);
-    BitBuffer nrz = nrzEncoder.encode(stuffed);
-    modulator.modulate(nrz, buffer, chunkSize, callback);
+    chunkIndex = 0;
+    internalModulate(payload, buffer, chunkSize, callback);
+    if (chunkIndex > 0) {
+      callback.accept(buffer, chunkIndex);
+    }
   }
 
   /**
@@ -86,8 +93,39 @@ public class Afsk1200Modulator {
    * @param callback Called with (buffer, validLength) after each filled chunk
    */
   public void modulate(byte[] payload, float[] buffer, int chunkSize, Duration leadSilence, Duration tailSilence, BiConsumer<float[], Integer> callback) {
+    chunkIndex = 0;
     emitSilence(buffer, chunkSize, leadSilence, callback);
-    modulate(payload, buffer, chunkSize, callback);
+    internalModulate(payload, buffer, chunkSize, callback);
     emitSilence(buffer, chunkSize, tailSilence, callback);
+    if (chunkIndex > 0) {
+      callback.accept(buffer, chunkIndex);
+    }
+  }
+
+  /**
+   * Modulates an AX.25 payload into AFSK1200 audio with optional leading and trailing silence,
+   * delivering the result in fixed-size audio chunks via the provided callback.
+   * <p>
+   * Each chunk passed to the callback will contain exactly {@code chunkSize} float samples.
+   * The final chunk is zero-padded with silence if needed.
+   * <p>
+   * Useful for feeding data into audio encoders (e.g., Opus) that require fixed-size input frames.
+   *
+   * @param payload       the AX.25 payload to modulate
+   * @param buffer        a reusable float buffer of at least {@code chunkSize} length
+   * @param chunkSize     number of float samples per chunk
+   * @param leadSilence   silence to prepend before the modulated signal
+   * @param tailSilence   silence to append after the modulated signal
+   * @param callback      called once per fully filled (or padded) chunk
+   */
+  public void modulateToFixedLengthChunks(byte[] payload, float[] buffer, int chunkSize, Duration leadSilence, Duration tailSilence, Consumer<float[]> callback) {
+    chunkIndex = 0;
+    emitSilence(buffer, chunkSize, leadSilence, (chunk, len) -> callback.accept(chunk));
+    internalModulate(payload, buffer, chunkSize, (chunk, len) -> callback.accept(chunk));
+    emitSilence(buffer, chunkSize, tailSilence, (chunk, len) -> callback.accept(chunk));
+    if (chunkIndex > 0) {
+      Arrays.fill(buffer, chunkIndex, buffer.length, 0f); // Fill remaining buffer with silence
+      callback.accept(buffer);
+    }
   }
 }
