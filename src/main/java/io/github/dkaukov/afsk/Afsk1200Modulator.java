@@ -33,13 +33,28 @@ public class Afsk1200Modulator {
   private final int sampleRate;
   private int chunkIndex;
 
-    /**
-   * Create a new Bell 202 (AFSK1200) modulator.
+  /**
+   * Creates a new AFSK1200 modulator with a default lead-in flag duration of 250 ms.
+   * This is typically sufficient for radio transmitters to stabilize (AGC, squelch, etc.).
    *
    * @param sampleRate Output sample rate in Hz (e.g., 48000)
    */
   public Afsk1200Modulator(int sampleRate) {
-    this.framer = new HdlcFramer(50, 3);
+    this(sampleRate, Duration.ofMillis(250)); // Default lead-in flag duration
+  }
+
+  /**
+   * Creates a new AFSK1200 modulator with a specified lead-in duration.
+   * The lead-in is expressed in milliseconds and determines how many HDLC flags (0x7E)
+   * will be transmitted before the actual frame begins. These flags are useful for
+   * activating the receiver's squelch (AM) or AGC before data transmission.
+   *
+   * @param sampleRate Output sample rate in Hz (e.g., 48000)
+   * @param leadInFlagDuration Duration of HDLC flags to prepend, typically 100–500 ms
+   */
+  public Afsk1200Modulator(int sampleRate, Duration leadInFlagDuration) {
+    int leadFlags = Math.round(leadInFlagDuration.toMillis() * 1200f / 1000f / 8f);
+    this.framer = new HdlcFramer(leadFlags, 3);
     this.nrzEncoder = new NrzEncoder();
     this.modulator = new Modulator(sampleRate, 1200, 2200, 1200);
     this.sampleRate = sampleRate;
