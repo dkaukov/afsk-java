@@ -45,7 +45,7 @@ public class Afsk1200Modulator {
 
   /**
    * Creates a new AFSK1200 modulator with a specified lead-in duration.
-   * The lead-in is expressed in milliseconds and determines how many HDLC flags (0x7E)
+   * The lead-in is expressed in duration and determines how many HDLC flags (0x7E)
    * will be transmitted before the actual frame begins. These flags are useful for
    * activating the receiver's squelch (AM) or AGC before data transmission.
    *
