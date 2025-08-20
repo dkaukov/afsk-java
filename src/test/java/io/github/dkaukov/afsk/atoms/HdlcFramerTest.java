@@ -31,7 +31,7 @@ public class HdlcFramerTest {
    * asserting that the decoded payload matches the original.
    */
   private void roundTrip(byte[] payload) {
-    HdlcFramer framer = new HdlcFramer();
+    HdlcFramer framer = new HdlcFramer(1, 1);
     HdlcDeframer deFramer = new HdlcDeframer();
     BitBuffer encoded = framer.frame(payload);
     ByteArrayOutputStream out = new ByteArrayOutputStream();

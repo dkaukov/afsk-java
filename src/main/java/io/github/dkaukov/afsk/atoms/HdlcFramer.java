@@ -21,6 +21,13 @@ public class HdlcFramer {
 
   public static final byte FLAG = 0x7E; // HDLC frame delimiter
   private int oneCount;
+  private final int leadFlagsCount;
+  private final int tailFlagsCount;
+
+  public HdlcFramer(int leadFlagsCount, int tailFlagsCount) {
+    this.leadFlagsCount = leadFlagsCount;
+    this.tailFlagsCount = tailFlagsCount;
+  }
 
   /**
    * Frames a payload by adding CRC, bit-stuffing, and flag bytes.
@@ -30,10 +37,12 @@ public class HdlcFramer {
    */
   public BitBuffer frame(byte[] data) {
     // Preallocate buffer with estimated overhead
-    BitBuffer bits = new BitBuffer((data.length + 2) * 10);
+    BitBuffer bits = new BitBuffer((data.length + leadFlagsCount + tailFlagsCount + 2) * 10);
     oneCount = 0;
-    // Start flag (not stuffed)
-    writeRawByte(FLAG, bits);
+    // Start flag(s) (not stuffed)
+    for (int i = 0; i < leadFlagsCount; i++) {
+      writeRawByte(FLAG, bits);
+    }
     // Payload with bit-stuffing
     for (byte b : data) {
       stuffByte(b, bits);
@@ -42,8 +51,10 @@ public class HdlcFramer {
     int crc = Ax25Fcs.calculateFcs(data) ^ 0xffff;
     stuffByte((byte) (crc & 0xFF), bits);
     stuffByte((byte) ((crc >> 8) & 0xFF), bits);
-    // End flag (not stuffed)
-    writeRawByte(FLAG, bits);
+    // End flag(s) (not stuffed)
+    for (int i = 0; i < tailFlagsCount; i++) {
+      writeRawByte(FLAG, bits);
+    }
     return bits;
   }
 

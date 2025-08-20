@@ -39,7 +39,7 @@ public class Afsk1200Modulator {
    * @param sampleRate Output sample rate in Hz (e.g., 48000)
    */
   public Afsk1200Modulator(int sampleRate) {
-    this.framer = new HdlcFramer();
+    this.framer = new HdlcFramer(50, 3);
     this.nrzEncoder = new NrzEncoder();
     this.modulator = new Modulator(sampleRate, 1200, 2200, 1200);
     this.sampleRate = sampleRate;
