@@ -11,16 +11,16 @@
  */
 package io.github.dkaukov.afsk;
 
+import io.github.dkaukov.afsk.atoms.DecimatingDemodulator;
+import io.github.dkaukov.afsk.atoms.FrameVerifier;
 import io.github.dkaukov.afsk.atoms.HdlcDeframer;
 import io.github.dkaukov.afsk.atoms.HdlcDeframer.FrameListener;
-import io.github.dkaukov.afsk.atoms.Demodulator;
-import io.github.dkaukov.afsk.atoms.SymbolSlicerPll;
-import io.github.dkaukov.afsk.atoms.FrameVerifier;
 import io.github.dkaukov.afsk.atoms.NrziDecoder;
+import io.github.dkaukov.afsk.atoms.SymbolSlicerPll;
 
 public class Afsk1200Demodulator {
 
-  private final Demodulator demodulator;
+  private final DecimatingDemodulator demodulator;
   private final SymbolSlicerPll slicer;
   private final NrziDecoder nrziDecoder;
   private final HdlcDeframer framer;
@@ -31,8 +31,8 @@ public class Afsk1200Demodulator {
     this.onFrame = onFrame;
     this.nrziDecoder = new NrziDecoder();
     this.framer = new HdlcDeframer();
-    this.demodulator = new Demodulator(sampleRate, 1200, 2200, 1200);
-    this.slicer = new SymbolSlicerPll(sampleRate, 1200);
+    this.demodulator = new DecimatingDemodulator(sampleRate, 1200, 2200, 1200, 1);
+    this.slicer = new SymbolSlicerPll(sampleRate / 1f, 1200);
     frameVerifier  = new FrameVerifier(true, bitRecovery);;
   }
 
