@@ -155,5 +155,6 @@ PRs and issues welcome! Please include:
 
 GNU **GPL-3.0**. See [`LICENSE`](./LICENSE) for details. 
 
+[1]: https://mvnrepository.com/artifact/io.github.dkaukov/afsk-java "Maven Repository: io.github.dkaukov » afsk-java"
 
 
