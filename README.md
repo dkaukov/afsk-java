@@ -1,6 +1,6 @@
 # afsk-java
 
-Lightweight Java library for **Bell 202 / AFSK-1200** demodulation and AX.25 frame decoding. Designed to run on desktop JVMs **and** Android (no native deps).
+Lightweight Java library for **Bell 202 / AFSK-1200** demodulation. Designed to run on desktop JVMs **and** Android (no native deps).
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.dkaukov/afsk-java.svg)](https://mvnrepository.com/artifact/io.github.dkaukov/afsk-java)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](#license)
