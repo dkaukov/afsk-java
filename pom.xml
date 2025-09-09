@@ -43,6 +43,7 @@
 
   <properties>
     <project.build.targetJdk>17</project.build.targetJdk>
+    <basepom.release.push-changes>true</basepom.release.push-changes>
 
     <sonar.organization>dkaukov</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
